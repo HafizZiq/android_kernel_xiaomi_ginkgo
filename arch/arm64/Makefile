@@ -105,7 +105,9 @@ KBUILD_AFLAGS  += $(OPT_FLAGS)
 KBUILD_LDFLAGS += $(OPT_FLAGS)
 KBUILD_CFLAGS	+= -mgeneral-regs-only $(lseinstr) $(brokengasinst) $(vdso32)
 KBUILD_CFLAGS	+= -fno-asynchronous-unwind-tables
+ifeq ($(CONFIG_ARM64_ERRATUM_843419),y)
 KBUILD_CFLAGS	+= $(call cc-option, -mpc-relative-literal-loads)
+endif
 KBUILD_CFLAGS	+= -fno-pic
 KBUILD_CFLAGS	+= $(call cc-disable-warning, psabi)
 KBUILD_AFLAGS	+= $(lseinstr) $(brokengasinst) $(vdso32)
