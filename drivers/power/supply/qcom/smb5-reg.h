@@ -344,6 +344,7 @@ enum {
  ********************************/
 #define TYPE_C_SNK_STATUS_REG			(TYPEC_BASE + 0x06)
 #define DETECTED_SRC_TYPE_MASK			GENMASK(9, 0)
+#define SNK_DAM_MASK				GENMASK(9, 4)
 #define SNK_RP_STD_DAM_BIT 		BIT(6)
 #define SNK_RP_1P5_DAM_BIT 		BIT(5)
 #define SNK_RP_3P0_DAM_BIT 		BIT(4)
