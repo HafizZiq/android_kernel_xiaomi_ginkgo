@@ -32,6 +32,7 @@ enum qg_sdam_param {
 	SDAM_ESR_DISCHARGE_SF,
 	SDAM_MAGIC,
 	SDAM_BATT_AGE_LEVEL,
+	SDAM_FLASH_OCV,
 	SDAM_MAX,
 };
 
