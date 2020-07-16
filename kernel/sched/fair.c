@@ -5828,7 +5828,7 @@ cpu_is_in_target_set(struct task_struct *p, int cpu)
 
 	int first_cpu, next_usable_cpu;
 
-	if (schedtune_task_boost(p)) {
+	if (schedtune_task_boost(p) && p->prio <= DEFAULT_PRIO) {
 		first_cpu = rd->mid_cap_orig_cpu != -1 ? rd->mid_cap_orig_cpu :
 			    rd->max_cap_orig_cpu;
 	} else {
@@ -7724,8 +7724,9 @@ static inline int find_best_target(struct task_struct *p, int *backup_cpu,
 				 * Skip searching for active CPU for tasks have
 				 * high priority & prefer_high_cap.
 				 */
-				if (boosted && p->prio <= DEFAULT_PRIO)
+				if (prefer_idle && p->prio <= DEFAULT_PRIO)
 					continue;
+
 				/*
 				 * Case A.2: Target ACTIVE CPU
 				 * Favor CPUs with max spare capacity.
@@ -7964,7 +7965,9 @@ static inline int find_best_target(struct task_struct *p, int *backup_cpu,
 
 	if (target_cpu == -1 && most_spare_cap_cpu != -1 &&
 		/* ensure we use active cpu for active migration */
-		!(p->state == TASK_RUNNING && !idle_cpu(most_spare_cap_cpu)))
+		!(p->state == TASK_RUNNING && !idle_cpu(most_spare_cap_cpu)) &&
+		/* do not pick an overutilized most_spare_cap_cpu */
+		!cpu_overutilized(most_spare_cap_cpu))
 		target_cpu = most_spare_cap_cpu;
 
 	trace_sched_find_best_target(p, prefer_idle, min_util, cpu,
