@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2015,2017, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  * Copyright (c) 2017-2018, Paranoid Android.
  * Copyright (C) 2017-2018, Razer Inc.
  *
@@ -47,6 +48,7 @@ static struct kthread_work input_boost_work;
 
 static struct kthread_work powerkey_input_boost_work;
 
+static struct work_struct powerkey_input_boost_work;
 static bool input_boost_enabled;
 
 static unsigned int input_boost_ms = 40;
@@ -96,7 +98,7 @@ static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 	if (!ntokens) {
 		if (sscanf(buf, "%u\n", &val) != 1)
 			return -EINVAL;
-		for_each_possible_cpu(i) {
+		for_each_possible_cpu(i){
 			if (type == default_input_boost)
 				per_cpu(sync_info, i).input_boost_freq = val;
 			else if (type == powerkey_input_boost)
