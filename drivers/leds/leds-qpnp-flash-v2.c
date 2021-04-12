@@ -1,5 +1,5 @@
 /* Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
- * Copyright (C) 2019 XiaoMi, Inc.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1818,7 +1818,7 @@ static void qpnp_flashlight_led_brightness_set(struct led_classdev *led_cdev,
 	struct qpnp_flash_led *led = NULL;
 	int rc;
 	int i, j;
-	
+
 #ifdef CONFIG_KERNEL_CUSTOM_F7A
 	if (100 == value)
 		value = 70;
@@ -1836,7 +1836,7 @@ static void qpnp_flashlight_led_brightness_set(struct led_classdev *led_cdev,
 		pr_err("Failed to get flash driver data\n");
 		return;
 	}
-	
+
 	spin_lock(&led->lock);
 	if (flashlight_data) {
 		for(i = 0; i < flashlight_data->num_switch; ++i)
@@ -1858,7 +1858,7 @@ static void qpnp_flashlight_led_brightness_set(struct led_classdev *led_cdev,
 					break;
 				}
 			}
-		
+
 		for(i = 0; i < flashlight_data->num_switch; ++i)
 			for(j = 0; j < led->num_snodes; ++j) {
 				pr_debug(" switch name[%d] = %s, snode name[%d] = %s\n",i, flashlight_data->switch_name[i],j, led->snode[j].cdev.name);
@@ -2277,7 +2277,7 @@ static int qpnp_flashlight_led_parse_and_register(struct qpnp_flash_led *led,
 	} else
 		flashlight_node->num_torch = count;
 	pr_debug("%s qcom,torch-name count %d\n", __func__, flashlight_node->num_torch);
-	
+
 	temp_name = kzalloc(sizeof(char *) * count, GFP_KERNEL);
 	if(temp_name) {
 		for(i = 0; i < count; ++i) {
@@ -2289,7 +2289,7 @@ static int qpnp_flashlight_led_parse_and_register(struct qpnp_flash_led *led,
 	} else
 		pr_err("%s alloc torch_name faild!!!\n",__func__);
 
-	
+
 	count = of_property_count_strings(node, "qcom,switch-name");
 	if (!count || (count == -EINVAL)) {
 		pr_err("%s:%d number of entries is 0 or not present in dts\n",
@@ -2298,7 +2298,7 @@ static int qpnp_flashlight_led_parse_and_register(struct qpnp_flash_led *led,
 	} else
 		flashlight_node->num_switch = count;
 	pr_debug("%s qcom,switch-name count %d\n", __func__, count);
-	
+
 	temp_name = kzalloc(sizeof(char *) * count, GFP_KERNEL);
 	if(temp_name) {
 		for(i = 0; i < count; ++i) {
@@ -2309,7 +2309,7 @@ static int qpnp_flashlight_led_parse_and_register(struct qpnp_flash_led *led,
 		}
 	} else
 		pr_err("%s alloc switch_name faild!!!\n",__func__);
-		
+
 	rc = of_property_read_u32(node, "qcom,id", &val);
 	if (!rc) {
 		flashlight_node->id = (u8)val;
@@ -2317,7 +2317,7 @@ static int qpnp_flashlight_led_parse_and_register(struct qpnp_flash_led *led,
 		pr_err("Unable to read flashlight LED ID\n");
 		return rc;
 	}
-	
+
 	rc = led_classdev_register(&led->pdev->dev, &flashlight_node->cdev);
 	if (rc < 0) {
 		pr_err("Unable to register flashlight node %d\n", flashlight_node->id);

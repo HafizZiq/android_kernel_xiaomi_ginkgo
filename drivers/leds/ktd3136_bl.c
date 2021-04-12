@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 ST-Ericsson SA.
+ * Copyright (C) 2021 XiaoMi, Inc.
  * Copyright (C) 2009 Motorola, Inc.
  *
  * License Terms: GNU General Public License v2
