@@ -513,6 +513,7 @@ static void __init mm_init(void)
 
 int fpsensor=1;
 
+int lct_hardwareid = 0;  //if board id is 2,it`s new board for imx582
 asmlinkage __visible void __init start_kernel(void)
 {
 	char *command_line;
@@ -553,15 +554,24 @@ asmlinkage __visible void __init start_kernel(void)
 	build_all_zonelists(NULL);
 	page_alloc_init();
 
-	pr_notice("Kernel command line: %s\n", boot_command_line);
-
+	p = NULL;
 	p = strstr(command_line, "androidboot.fpsensor=fpc");
-	if (p) {
-		pr_info("You have fpc scanner\n");
+	if(p) {
 		fpsensor = 1;//fpc fingerprint
+		printk("I am fpc fingerprint");
 	} else {
-		pr_info("You have goodix scanner\n");
 		fpsensor = 2;//goodix fingerprint
+		printk("I am goodix fingerprint");
+	}
+
+	p = NULL;
+	p= strstr(command_line, "androidboot.hwversion=2");
+	if(p) {
+               lct_hardwareid = 2;
+		printk("I am new board for imx582 camera");
+	} else {
+               lct_hardwareid = 0;
+		printk("I am old board for imx582 camera");
 	}
 
 	pr_notice("Kernel command line: %s\n", boot_command_line);
