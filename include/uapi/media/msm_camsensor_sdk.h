@@ -56,12 +56,18 @@
 
 #define SECURE_CAM_RST_MODULES
 
+//Switch for virtual camera
+#define VIRTUAL_CAMERA
+
 enum msm_sensor_camera_id_t {
 	CAMERA_0,
 	CAMERA_1,
 	CAMERA_2,
 	CAMERA_3,
 	CAMERA_4,
+#ifdef VIRTUAL_CAMERA
+	CAMERA_5,
+#endif
 	MAX_CAMERAS,
 };
 
@@ -76,10 +82,10 @@ enum i2c_freq_mode_t {
 enum camb_position_t {
 	BACK_CAMERA_B,
 	FRONT_CAMERA_B,
-	AUX_CAMERA_G_B = 0x110,
-	AUX_CAMERA_W_B = 0x120,
+	AUX_CAMERA_G_B = 0x110, //for wide camera
+	AUX_CAMERA_W_B = 0x120,//for micro camera
 	AUX_CAMERA_B = 0x100,
-	AUX_CAMERA_FRONT_B = 0x101,
+	AUX_CAMERA_FRONT_B = 0x101,//for front aux camera
 	INVALID_CAMERA_B,
 };
 
