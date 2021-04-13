@@ -1,5 +1,5 @@
 /* Copyright (c) 2013-2019, The Linux Foundation. All rights reserved.
- * Copyright (C) 2019 XiaoMi, Inc.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -65,9 +65,9 @@ static void scm_disable_sdi(void);
  * So the SDI cannot be re-enabled when it already by-passed.
  */
 #ifdef CONFIG_DISABLE_DOWNLOAD
-static int download_mode = 0;
+int download_mode = 0;
 #else
-static int download_mode = 1;
+int download_mode = 1;
 #endif
 static bool force_warm_reboot;
 
@@ -195,10 +195,12 @@ static int dload_set(const char *val, const struct kernel_param *kp)
 
 	int old_val = download_mode;
 
-	if (!download_mode) {
+	/* make sure DUT entry ramdump by "echo 1 > /sys/module/msm_poweroff/parameters/download_mode" */
+	/*if (!download_mode) {
 		pr_err("Error: SDI dynamic enablement is not supported\n");
 		return -EINVAL;
 	}
+	*/
 
 	ret = param_set_int(val, kp);
 
@@ -349,9 +351,12 @@ static void msm_restart_prepare(const char *cmd)
 					     restart_reason);
 		} else if (!strncmp(cmd, "edl", 3)) {
 			if (0)
+			{
 				enable_emergency_dload_mode();
-			else
+			}else
+			{
 				pr_notice("This command already been disabled\n");
+			}
 		} else {
 			qpnp_pon_set_restart_reason(PON_RESTART_REASON_NORMAL);
 			__raw_writel(0x77665501, restart_reason);
