@@ -1,4 +1,5 @@
 /* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -70,7 +71,7 @@
 #define USB3_HCSPARAMS1		(0x4)
 #define USB3_PORTSC		(0x420)
 
-#define DWC3_DCTL	0xc704
+#define DWC3_DCTL	0xc704 
 #define DWC3_DCTL_RUN_STOP	BIT(31)
 
 /**
@@ -2661,8 +2662,9 @@ static int dwc3_msm_suspend(struct dwc3_msm *mdwc, bool force_power_collapse)
 	dbg_event(0xFF, "Ctl Sus", atomic_read(&dwc->in_lpm));
 
 	/* kick_sm if it is waiting for lpm sequence to finish */
-	if (test_and_clear_bit(WAIT_FOR_LPM, &mdwc->inputs))
-		queue_delayed_work(mdwc->sm_usb_wq, &mdwc->sm_work, 0);
+//	if (test_and_clear_bit(WAIT_FOR_LPM, &mdwc->inputs))
+//		queue_delayed_work(mdwc->sm_usb_wq, &mdwc->sm_work, 0);
+	test_and_clear_bit(WAIT_FOR_LPM, &mdwc->inputs);
 	mutex_unlock(&mdwc->suspend_resume_mutex);
 
 	return 0;
@@ -4637,7 +4639,7 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 			if(!dwc->softconnect && get_psy_type(mdwc) == POWER_SUPPLY_TYPE_USB_CDP){ 
 			     u32 reg; 
 			     dbg_event(0xFF, "cdp pullup dp", 0); 
-			     
+
 			     reg = dwc3_readl(dwc->regs, DWC3_DCTL); 
 			     reg |= DWC3_DCTL_RUN_STOP; 
 			     dwc3_writel(dwc->regs, DWC3_DCTL, reg); 
