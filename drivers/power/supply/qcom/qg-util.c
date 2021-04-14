@@ -24,6 +24,8 @@
 #include "qg-reg.h"
 #include "qg-defs.h"
 #include "qg-util.h"
+#undef pr_info
+#define pr_info pr_debug
 
 static inline bool is_sticky_register(u32 addr)
 {
