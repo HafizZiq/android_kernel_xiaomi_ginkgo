@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -25,6 +26,9 @@
 #include "dsi_parser.h"
 
 char g_lcd_id[128];
+extern bool panel_init_judge;
+
+bool backlight_val;
 /**
  * topology is currently defined by a set of following 3 values:
  * 1. num of layer mixers
@@ -347,6 +351,7 @@ int dsi_panel_trigger_esd_attack(struct dsi_panel *panel)
 	return -EINVAL;
 }
 
+#ifdef CONFIG_TOUCHSCREEN_XIAOMI_C3J
 typedef int (*lct_tp_reset_enable_cb_t)(bool en);
 static lct_tp_reset_enable_cb_t lct_tp_reset_enable_cb_p = NULL;
 void set_tp_reset_gpio_callback(lct_tp_reset_enable_cb_t p_callback)
@@ -354,6 +359,7 @@ void set_tp_reset_gpio_callback(lct_tp_reset_enable_cb_t p_callback)
 	lct_tp_reset_enable_cb_p = p_callback;
 }
 EXPORT_SYMBOL(set_tp_reset_gpio_callback);
+#endif
 
 static int dsi_panel_reset(struct dsi_panel *panel)
 {
@@ -379,6 +385,7 @@ static int dsi_panel_reset(struct dsi_panel *panel)
 		}
 	}
 
+#ifdef CONFIG_TOUCHSCREEN_XIAOMI_C3J
 	if (strstr(g_lcd_id, "huaxing") != NULL) {
 
 		if (!IS_ERR_OR_NULL(lct_tp_reset_enable_cb_p)) {
@@ -415,6 +422,19 @@ static int dsi_panel_reset(struct dsi_panel *panel)
 						(r_config->sequence[i].sleep_ms * 1000) + 100);
 		}
 	}
+#else
+		for (i = 0; i < r_config->count; i++) {
+			gpio_set_value(r_config->reset_gpio,
+					r_config->sequence[i].level);
+
+			pr_err("[NVT-ts] lcd-reset_gpio = %d\n", r_config->sequence[i].level);
+
+			if (r_config->sequence[i].sleep_ms)
+				usleep_range(r_config->sequence[i].sleep_ms * 1000,
+						(r_config->sequence[i].sleep_ms * 1000) + 100);
+		}
+	}
+#endif
 
 	if (gpio_is_valid(panel->bl_config.en_gpio)) {
 		rc = gpio_direction_output(panel->bl_config.en_gpio, 1);
@@ -506,12 +526,14 @@ exit:
 	return rc;
 }
 
+#ifdef CONFIG_TOUCHSCREEN_XIAOMI_C3J
 static bool lcd_reset_keep_high = false;
 void set_lcd_reset_gpio_keep_high(bool en)
 {
 	lcd_reset_keep_high = en;
 }
 EXPORT_SYMBOL(set_lcd_reset_gpio_keep_high);
+#endif
 
 static int dsi_panel_power_off(struct dsi_panel *panel)
 {
@@ -520,9 +542,17 @@ static int dsi_panel_power_off(struct dsi_panel *panel)
 	if (gpio_is_valid(panel->reset_config.disp_en_gpio))
 		gpio_set_value(panel->reset_config.disp_en_gpio, 0);
 
-	if (!lcd_reset_keep_high) {
-		if (gpio_is_valid(panel->reset_config.reset_gpio))
+	if (gpio_is_valid(panel->reset_config.reset_gpio)) {
+#ifdef CONFIG_TOUCHSCREEN_XIAOMI_C3J
+		if (lcd_reset_keep_high)
+			pr_warn("%s: lcd-reset-gpio keep high\n", __func__);
+		else {
 			gpio_set_value(panel->reset_config.reset_gpio, 0);
+			pr_err("[NVT-ts] lcd-reset_gpio = 0\n");
+		}
+#else
+			gpio_set_value(panel->reset_config.reset_gpio, 0);
+#endif
 	}
 
 	if (gpio_is_valid(panel->reset_config.lcd_mode_sel_gpio))
@@ -652,7 +682,7 @@ static int dsi_panel_wled_register(struct dsi_panel *panel,
 }
 
 extern int sgm_brightness_set(uint16_t brightness);
-
+/*
 static int dsi_panel_update_backlight(struct dsi_panel *panel,
 	u32 bl_lvl)
 {
@@ -664,7 +694,7 @@ static int dsi_panel_update_backlight(struct dsi_panel *panel,
         sgm_brightness_set(bl_lvl);
 	return 0;
 }
-
+*/
 static int dsi_panel_update_pwm_backlight(struct dsi_panel *panel,
 	u32 bl_lvl)
 {
@@ -716,6 +746,23 @@ error:
 	return rc;
 }
 
+extern int sgm_brightness_set(uint16_t brightness);
+static int dsi_panel_update_backlight_externel(struct dsi_panel *panel,
+	u32 bl_lvl)
+{
+	if(bl_lvl > 0)
+		backlight_val = true;
+	else
+	       backlight_val = false;
+
+	if (!panel || (bl_lvl > 0xffff)) {
+		pr_err("invalid params\n");
+		return -EINVAL;
+	}
+
+	sgm_brightness_set(bl_lvl);
+	return 0;
+}
 int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 {
 	int rc = 0;
@@ -730,7 +777,7 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 		rc = backlight_device_set_brightness(bl->raw_bd, bl_lvl);
 		break;
 	case DSI_BACKLIGHT_DCS:
-		rc = dsi_panel_update_backlight(panel, bl_lvl);
+	//	rc = dsi_panel_update_backlight(panel, bl_lvl);
 		break;
 	case DSI_BACKLIGHT_EXTERNAL:
 		break;
@@ -742,6 +789,7 @@ int dsi_panel_set_backlight(struct dsi_panel *panel, u32 bl_lvl)
 		rc = -ENOTSUPP;
 	}
 
+	rc = dsi_panel_update_backlight_externel(panel, bl_lvl);
 	return rc;
 }
 
@@ -3371,6 +3419,9 @@ struct dsi_panel *dsi_panel_get(struct device *parent,
 	if (!panel->name)
 		panel->name = DSI_PANEL_DEFAULT_LABEL;
 
+	strcpy(g_lcd_id,panel->name);
+	msm_lcd_name_create_sysfs();
+
 	/*
 	 * Set panel type to LCD as default.
 	 */
@@ -4196,12 +4247,12 @@ int dsi_panel_set_feature(struct dsi_panel *panel,enum dsi_cmd_set_type type)
                pr_err("Invalid params\n");
                return -EINVAL;
        }
-       pr_info("xinj:%s panel_initialized=%d type=%d\n",__func__,panel->panel_initialized,type);
-	if (!panel->panel_initialized) {	
+       pr_info("xinj:%s panel_init_judge=%d type=%d,backlight_val = %d\n",__func__,panel_init_judge,type,backlight_val);
+	if ((!panel_init_judge) ||  (!backlight_val)) {	
 		pr_err("xinj: con't set cmds type=%d\n",type);	
 		return -EINVAL;	
 	}
-       
+
 	mutex_lock(&panel->panel_lock);
 
        rc = dsi_panel_tx_cmd_set(panel, type);
@@ -4423,8 +4474,10 @@ int dsi_panel_enable(struct dsi_panel *panel)
 	if (rc)
 		pr_err("[%s] failed to send DSI_CMD_SET_ON cmds, rc=%d\n",
 		       panel->name, rc);
-	else
+	else {
 		panel->panel_initialized = true;
+		panel_init_judge = true;
+	}
 	mutex_unlock(&panel->panel_lock);
 	return rc;
 }
@@ -4446,6 +4499,7 @@ int dsi_panel_post_enable(struct dsi_panel *panel)
 		       panel->name, rc);
 		goto error;
 	}
+        panel_init_judge = true;
 error:
 	mutex_unlock(&panel->panel_lock);
 	return rc;
@@ -4472,6 +4526,7 @@ int dsi_panel_pre_disable(struct dsi_panel *panel)
 error:
 	mutex_unlock(&panel->panel_lock);
 	panel->panel_initialized = false;
+	panel_init_judge =  false;
 	return rc;
 }
 
@@ -4514,6 +4569,7 @@ int dsi_panel_disable(struct dsi_panel *panel)
 	panel->panel_initialized = false;
 	panel->power_mode = SDE_MODE_DPMS_OFF;
 
+	panel_init_judge = false;
 	mutex_unlock(&panel->panel_lock);
 	return rc;
 }
