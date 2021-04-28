@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2019, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -102,6 +103,7 @@
 		clock-names = "cam_src_clk", "cam_clk";
 		qcom,clock-rates = <24000000 0>;
 	};
+
 //front eeprom2
 	eeprom2: qcom,eeprom@2 {
 		cell-index = <2>;
@@ -194,7 +196,7 @@
 		    <&clock_gcc GCC_CAMSS_MCLK1_CLK>;
 		clock-names = "cam_src_clk", "cam_clk";
 		qcom,clock-rates = <24000000 0>;
-	};
+        };
 
 //back macro
 	eeprom4: qcom,eeprom@4 {
@@ -350,6 +352,7 @@
 		clock-names = "cam_src_clk", "cam_clk";
 		qcom,clock-rates = <24000000 0>;
 	};
+
 //front
 	qcom,camera@2 {
 		cell-index = <2>;
