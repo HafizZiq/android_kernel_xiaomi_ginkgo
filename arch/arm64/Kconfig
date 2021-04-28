@@ -293,6 +293,12 @@ config HOTPLUG_SIZE_BITS
 	 of 2.
 	 If unsure, stick with default value.
 
+config KERNEL_CUSTOM_FACTORY
+    default n
+        bool "Custom for hardware FACTORY_pcb"
+	    help
+	            Custom for FACTORY_pcb.
+
 config SWIOTLB
 	def_bool y
 
@@ -885,16 +891,16 @@ config ARCH_HAS_CACHE_LINE_SIZE
 source "mm/Kconfig"
 
 config THERMAL_SWITCH
-	default n
-	bool "Support thermal config switch"
-	help
-	  Support thermal config switch.
+    default n
+        bool "Support themral config switch"
+	    help
+	            Support themral config switch.
 
 config DISABLE_DOWNLOAD
-	default n
-	bool "Disable download mode"
-	help
-	  Disable download mode.
+    default n
+        bool "Disable download mode"
+	    help
+	            Disable download mode.
 
 # Supported by clang >= 7.0
 config CC_HAVE_SHADOW_CALL_STACK
@@ -1462,6 +1468,13 @@ config KRYO_PMU_WORKAROUND
 	  overflow interrupts from multiple monitors.
 
 	  Enable this flag for effect SoCs.
+
+config BOOT_INFO
+	bool "Boot information from bootloader"
+	default y
+	help
+	  On embedded linux device, we try to collect more information from
+	  bootloader to kernel. eg. powerup reason.
 
 config BUILD_ARM64_DT_OVERLAY
 	bool "enable DT overlay compilation support"
