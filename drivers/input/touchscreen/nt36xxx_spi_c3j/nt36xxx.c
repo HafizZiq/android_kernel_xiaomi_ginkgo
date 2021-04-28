@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 - 2018 Novatek, Inc.
- * Copyright (C) 2019 XiaoMi, Inc.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * $Revision: 43560 $
  * $Date: 2019-04-19 11:34:19 +0800 (週五, 19 四月 2019) $
@@ -38,6 +38,7 @@
 #endif
 
 #include "nt36xxx.h"
+#include <linux/spi/spi-geni-qcom.h>
 #if NVT_TOUCH_ESD_PROTECT
 #include <linux/jiffies.h>
 #endif /* #if NVT_TOUCH_ESD_PROTECT */
@@ -47,7 +48,6 @@
 #include <linux/input/tp_common.h>
 #endif
 #endif
-
 #ifdef CHECK_TOUCH_VENDOR
 extern char *saved_command_line;
 
@@ -73,15 +73,8 @@ extern int32_t nvt_mp_proc_init(void);
 extern void nvt_mp_proc_deinit(void);
 #endif
 
-#if NVT_USB_PLUGIN
-static void nvt_ts_usb_plugin_work_func(struct work_struct *work);
-DECLARE_WORK(nvt_usb_plugin_work, nvt_ts_usb_plugin_work_func);
-extern touchscreen_usb_plugin_data_t g_touchscreen_usb_pulgin;
-#endif
-
 struct nvt_ts_data *ts;
-static bool driver_ready = false;
-
+static struct device *spi_geni_master_dev;
 #if BOOT_UPDATE_FIRMWARE
 static struct workqueue_struct *nvt_fwu_wq;
 extern void Boot_Update_Firmware(struct work_struct *work);
@@ -195,11 +188,11 @@ static ssize_t double_tap_store(struct kobject *kobj,
                                 size_t count)
 {
     int rc, val;
-    
+
     rc = kstrtoint(buf, 10, &val);
     if (rc)
     return -EINVAL;
-    
+
     ts->is_gesture_mode = !!val;
     return count;
 }
@@ -214,6 +207,7 @@ static int32_t nvt_ts_resume(struct device *dev);
 static int32_t nvt_ts_suspend(struct device *dev);
 
 typedef int(*touchpanel_recovery_cb_p_t)(void);
+extern int set_touchpanel_recovery_callback(touchpanel_recovery_cb_p_t cb);
 
 /* Fix Touch/Fingerprint wakeup crash issue */
 int nvt_ts_recovery_callback(void)
@@ -231,53 +225,6 @@ int nvt_ts_recovery_callback(void)
 	return 0;
 }
 EXPORT_SYMBOL(nvt_ts_recovery_callback);
-#endif
-
-#if NVT_USB_PLUGIN
-void nvt_ts_usb_event_callback(void)
-{
-	schedule_work(&nvt_usb_plugin_work);
-}
-
-static void nvt_ts_usb_plugin_work_func(struct work_struct *work)
-{
-	uint8_t buf[8] = {0};
-	int32_t ret = 0;
-
-	if ( !bTouchIsAwake ) {
-		NVT_ERR("tp is suspended, can not to set\n");
-		return;
-	}
-
-	NVT_LOG("++\n");
-	mutex_lock(&ts->lock);
-	NVT_LOG("usb_plugged_in = %d\n", g_touchscreen_usb_pulgin.usb_plugged_in);
-
-	msleep(35);
-
-	//---set xdata index to EVENT BUF ADDR---
-	ret = nvt_set_page(ts->mmap->EVENT_BUF_ADDR | EVENT_MAP_HOST_CMD);
-	if (ret < 0) {
-		NVT_ERR("Set event buffer index fail!\n");
-		goto exit;
-	}
-
-	buf[0] = EVENT_MAP_HOST_CMD;
-	if (g_touchscreen_usb_pulgin.usb_plugged_in)
-		buf[1] = 0x53;// power plug ac on
-	else
-		buf[1] = 0x51;// power plug off
-
-	ret = CTP_SPI_WRITE(ts->client, buf, 2);
-	if (ret < 0) {
-		NVT_ERR("Write pwr plug switch command fail!\n");
-		goto exit;
-	}
-
-exit:
-	mutex_unlock(&ts->lock);
-	NVT_LOG("--\n");
-}
 #endif
 
 /*******************************************************
@@ -1854,6 +1801,8 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 
 	NVT_LOG("start\n");
 
+	spi_geni_master_dev = NULL;	
+
 	ts = kzalloc(sizeof(struct nvt_ts_data), GFP_KERNEL);
 	if (IS_ERR_OR_NULL(ts)) {
 		NVT_ERR("failed to allocated memory for nvt ts data\n");
@@ -2177,7 +2126,11 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 	INIT_WORK(&ts->resume_work, nvt_ts_resume_work);
 #ifdef _MSM_DRM_NOTIFY_H_
 	ts->drm_notif.notifier_call = nvt_drm_notifier_callback;
-	ret = msm_drm_register_client(&ts->drm_notif);
+	if ((strnstr(saved_command_line,"tianma",strlen(saved_command_line)) != NULL) || (strnstr(saved_command_line,"shenchao",strlen(saved_command_line)) != NULL)){
+		ret = drm_register_client(&ts->drm_notif);
+	}else{
+		ret = msm_drm_register_client(&ts->drm_notif);
+	}
 	if(ret) {
 		NVT_ERR("register drm_notifier failed. ret=%d\n", ret);
 		goto err_register_drm_notif_failed;
@@ -2213,11 +2166,14 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 
 	pm_runtime_enable(&ts->client->dev);
 
-#if NVT_USB_PLUGIN
-	g_touchscreen_usb_pulgin.event_callback = nvt_ts_usb_event_callback;
-#endif
-
-	driver_ready = true;
+	set_touchpanel_recovery_callback(nvt_ts_recovery_callback);
+	//spi bus pm_runtime_get
+	spi_geni_master_dev = lct_get_spi_geni_master_dev(ts->client->master);
+	if (spi_geni_master_dev) {
+		if (pm_runtime_get(spi_geni_master_dev))
+			NVT_ERR("pm_runtime_get fail!\n");
+	}
+	
 
 	return 0;
 
@@ -2226,8 +2182,13 @@ err_create_nvt_ts_workqueue_failed:
 	if (ts->workqueue)
 		destroy_workqueue(ts->workqueue);
 #ifdef _MSM_DRM_NOTIFY_H_
-	if (msm_drm_unregister_client(&ts->drm_notif))
-		NVT_ERR("Error occurred while unregistering drm_notifier.\n");
+	if ((strnstr(saved_command_line,"tianma",strlen(saved_command_line)) != NULL) || (strnstr(saved_command_line,"shenchao",strlen(saved_command_line)) != NULL)){
+		if (drm_unregister_client(&ts->drm_notif))
+			NVT_ERR("Error occurred while unregistering drm_notifier.\n");
+	} else {
+		if (msm_drm_unregister_client(&ts->drm_notif))
+			NVT_ERR("Error occurred while unregistering drm_notifier.\n");
+	}
 err_register_drm_notif_failed:
 #else
 	if (fb_unregister_client(&ts->fb_notif))
@@ -2336,8 +2297,13 @@ static int32_t nvt_ts_remove(struct spi_device *client)
 	if (ts->workqueue)
 		destroy_workqueue(ts->workqueue);
 #ifdef _MSM_DRM_NOTIFY_H_
-	if (msm_drm_unregister_client(&ts->drm_notif))
-		NVT_ERR("Error occurred while unregistering drm_notifier.\n");
+	if ((strnstr(saved_command_line,"tianma",strlen(saved_command_line)) != NULL) || (strnstr(saved_command_line,"shenchao",strlen(saved_command_line)) != NULL)) {
+		if (drm_unregister_client(&ts->drm_notif))
+			NVT_ERR("Error occurred while unregistering drm_notifier.\n");
+	}else{
+		if (msm_drm_unregister_client(&ts->drm_notif))
+			NVT_ERR("Error occurred while unregistering drm_notifier.\n");
+	}
 #else
 	if (fb_unregister_client(&ts->fb_notif))
 		NVT_ERR("Error occurred while unregistering fb_notifier.\n");
@@ -2434,8 +2400,14 @@ static void nvt_ts_shutdown(struct spi_device *client)
 	if (ts->workqueue)
 		destroy_workqueue(ts->workqueue);
 #ifdef _MSM_DRM_NOTIFY_H_
-	if (msm_drm_unregister_client(&ts->drm_notif))
-		NVT_ERR("Error occurred while unregistering drm_notifier.\n");
+	if ((strnstr(saved_command_line,"tianma",strlen(saved_command_line)) != NULL) || (strnstr(saved_command_line,"shenchao",strlen(saved_command_line)) != NULL)){
+		if (drm_unregister_client(&ts->drm_notif))
+			NVT_ERR("Error occurred while unregistering drm_notifier.\n");
+	} else {
+		if (msm_drm_unregister_client(&ts->drm_notif))
+			NVT_ERR("Error occurred while unregistering drm_notifier.\n");
+	}
+
 #else
 	if (fb_unregister_client(&ts->fb_notif))
 		NVT_ERR("Error occurred while unregistering fb_notifier.\n");
@@ -2510,8 +2482,14 @@ static int32_t nvt_ts_suspend(struct device *dev)
 	//Pulling LCD_RESET high causes the IC to go into deep sleep(when screen off).
 	set_lcd_reset_gpio_keep_high(true);//(Only xiaomi C3J project && Only NT36672A)
 
-	if (!ts->is_gesture_mode)
+	if (!ts->is_gesture_mode) {
 		nvt_irq_enable(false);
+			//spi bus pm_runtime_get
+		if (spi_geni_master_dev) {
+			if (pm_runtime_put(spi_geni_master_dev))
+				NVT_ERR("pm_runtime_put fail!\n");
+		}
+	}
 #else
 	nvt_irq_enable(false);
 #endif
@@ -2602,8 +2580,14 @@ static int32_t nvt_ts_resume(struct device *dev)
 	}
 
 #if WAKEUP_GESTURE
-	if (!ts->is_gesture_mode)
+	if (!ts->is_gesture_mode) {
 		nvt_irq_enable(true);
+			//spi bus pm_runtime_get
+		if (spi_geni_master_dev) {
+			if (pm_runtime_get(spi_geni_master_dev))
+				NVT_ERR("pm_runtime_get fail!\n");
+		}
+	}
 #else
 	nvt_irq_enable(true);
 #endif
@@ -2629,12 +2613,6 @@ static int32_t nvt_ts_resume(struct device *dev)
 	if (!get_lct_tp_work_status())
 		nvt_irq_enable(false);
 #endif
-
-#if NVT_USB_PLUGIN
-	if (g_touchscreen_usb_pulgin.valid && g_touchscreen_usb_pulgin.usb_plugged_in)
-		g_touchscreen_usb_pulgin.event_callback();
-#endif
-
 	NVT_LOG("end\n");
 
 	return 0;
@@ -2681,6 +2659,24 @@ static int nvt_drm_notifier_callback(struct notifier_block *self, unsigned long 
 	if (!evdata || (evdata->id != 0))
 		return 0;
 
+	if ((strnstr(saved_command_line,"tianma",strlen(saved_command_line)) != NULL) || (strnstr(saved_command_line,"shenchao",strlen(saved_command_line)) != NULL)) {
+	if (evdata->data && ts) {
+		blank = evdata->data;
+		if (event == DRM_EARLY_EVENT_BLANK) {
+			if (*blank == DRM_BLANK_POWERDOWN) {
+				NVT_LOG("event=%lu, *blank=%d\n", event, *blank);
+				cancel_work_sync(&ts->resume_work);
+				nvt_ts_suspend(&ts->client->dev);
+			}
+		} else if (event == DRM_EVENT_BLANK) {
+			if (*blank == DRM_BLANK_UNBLANK) {
+				NVT_LOG("event=%lu, *blank=%d\n", event, *blank);
+				//nvt_ts_resume(&ts->client->dev);
+				queue_work(ts->workqueue, &ts->resume_work);
+			}
+		}
+	}
+	} else {
 	if (evdata->data && ts) {
 		blank = evdata->data;
 		if (event == MSM_DRM_EARLY_EVENT_BLANK) {
@@ -2697,7 +2693,7 @@ static int nvt_drm_notifier_callback(struct notifier_block *self, unsigned long 
 			}
 		}
 	}
-
+	}
 	return 0;
 }
 #else
@@ -2830,10 +2826,10 @@ static int32_t __init nvt_driver_init(void)
 		ret = -ENOMEM;
 		goto err_driver;
 	} else {
-		if (strstr(saved_command_line,"tianma") != NULL) {
+		if (strnstr(saved_command_line,"tianma",strlen(saved_command_line)) != NULL) {
 			touch_vendor_id = TP_VENDOR_TIANMA;
 			NVT_LOG("TP info: [Vendor]tianma [IC]nt36672a\n");
-		} else if (strstr(saved_command_line,"shenchao") != NULL) {
+		} else if (strnstr(saved_command_line,"shenchao",strlen(saved_command_line)) != NULL) {
 			touch_vendor_id = TP_VENDOR_EBBG;
 			NVT_LOG("TP info: [Vendor]shenchao [IC]nt36672a\n");
 		} else {
