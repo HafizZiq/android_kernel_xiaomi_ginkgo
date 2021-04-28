@@ -1,4 +1,5 @@
 /* Copyright (c) 2018-2021 The Linux Foundation. All rights reserved.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -39,12 +40,17 @@ union power_supply_propval lct_therm_level;
 
 union power_supply_propval lct_therm_call_level = {5,};
 
+
 union power_supply_propval lct_therm_globe_level = {2,};
 union power_supply_propval lct_therm_india_level = {1,};
+
 
 bool lct_backlight_off;
 int LctIsInCall = 0;
 int LctThermal = 0;
+//extern int hwc_check_india;
+//extern int hwc_check_global;
+//extern bool is_poweroff_charge;
 
 static struct smb_params smb5_pmi632_params = {
 	.fcc			= {
@@ -1076,7 +1082,7 @@ static int smb5_init_usb_psy(struct smb5 *chip)
 	struct power_supply_config usb_cfg = {};
 	struct smb_charger *chg = &chip->chg;
 
-	chg->usb_psy_desc = usb_psy_desc;
+    chg->usb_psy_desc = usb_psy_desc;
 	usb_cfg.drv_data = chip;
 	usb_cfg.of_node = chg->dev->of_node;
 	chg->usb_psy = devm_power_supply_register(chg->dev,
@@ -3512,12 +3518,12 @@ static ssize_t lct_thermal_call_status_store(struct device *dev,
 	unsigned long input;
 
 	retval = kstrtol(buf, 10, &input);
-	if (retval < 0) {
+	if (retval < 0){
 		pr_err("kstrtol fail%d\n", retval);
 		return retval;
 	}
 
-	LctIsInCall = input;
+    LctIsInCall = input;
 	pr_debug("IsInCall = %d\n", LctIsInCall);
 
 	return count;
@@ -3531,19 +3537,20 @@ static struct device_attribute attrs2[] = {
 static void thermal_fb_notifier_resume_work(struct work_struct *work)
 {
 	struct smb_charger *chg = container_of(work, struct smb_charger, fb_notify_work);
-
 	LctThermal = 1;
 
-	if ((lct_backlight_off) && (LctIsInCall == 0)) {
-		if (lct_therm_lvl_reserved.intval >= 2)
-			smblib_set_prop_system_temp_level(chg, &lct_therm_globe_level);//level 2 2.2A
+		if ((lct_backlight_off) && (LctIsInCall == 0) )
+		{
+			if (lct_therm_lvl_reserved.intval >= 2)
+				smblib_set_prop_system_temp_level(chg,&lct_therm_globe_level);//level 2 2.2A
 		else
-			smblib_set_prop_system_temp_level(chg, &lct_therm_lvl_reserved);//from thermal-level
-	} else if (LctIsInCall == 1)
-		smblib_set_prop_system_temp_level(chg, &lct_therm_call_level);//level 5 800ma
-	else
-		smblib_set_prop_system_temp_level(chg, &lct_therm_lvl_reserved);//from thermal-levle
-	LctThermal = 0;
+			smblib_set_prop_system_temp_level(chg,&lct_therm_lvl_reserved);//from thermal-level
+		}
+		else if (LctIsInCall == 1)
+			smblib_set_prop_system_temp_level(chg,&lct_therm_call_level);//level 5 800ma
+		else
+			smblib_set_prop_system_temp_level(chg,&lct_therm_lvl_reserved);//from thermal-levle
+		LctThermal = 0;
 }
 
 /* frame buffer notifier block control the suspend/resume procedure */
@@ -3552,16 +3559,17 @@ static int thermal_notifier_callback(struct notifier_block *noti, unsigned long 
 	struct fb_event *ev_data = data;
 	struct smb_charger *chg = container_of(noti, struct smb_charger, notifier);
 	int *blank;
-
+	printk("%s %d",__FUNCTION__,__LINE__);
 	if (ev_data && ev_data->data && chg) {
 		blank = ev_data->data;
 		if (event == MSM_DRM_EARLY_EVENT_BLANK && *blank == MSM_DRM_BLANK_UNBLANK) {
 			lct_backlight_off = false;
-			pr_debug("thermal_notifier lct_backlight_off:%d", lct_backlight_off);
+			pr_debug("thermal_notifier lct_backlight_off:%d",lct_backlight_off);
 			schedule_work(&chg->fb_notify_work);
-		} else if (event == MSM_DRM_EVENT_BLANK && *blank == MSM_DRM_BLANK_POWERDOWN) {
+		}
+		else if (event == MSM_DRM_EVENT_BLANK && *blank == MSM_DRM_BLANK_POWERDOWN) {
 			lct_backlight_off = true;
-			pr_debug("thermal_notifier lct_backlight_off:%d", lct_backlight_off);
+			pr_debug("thermal_notifier lct_backlight_off:%d",lct_backlight_off);
 			schedule_work(&chg->fb_notify_work);
 		}
 	}
@@ -3575,15 +3583,17 @@ static int lct_register_powermanger(struct smb_charger *chg)
 
 	chg->notifier.notifier_call = thermal_notifier_callback;
 	ret = msm_drm_register_client(&chg->notifier);
-	if (ret)
-		pr_err("[FB]Unable to register fb_notifier: %d", ret);
+    if (ret)
+        pr_err("[FB]Unable to register fb_notifier: %d", ret);
 
 	return 0;
 }
 
 static int lct_unregister_powermanger(struct smb_charger *chg)
 {
+
 	msm_drm_unregister_client(&chg->notifier);
+
 	return 0;
 }
 
@@ -3784,14 +3794,14 @@ static int smb5_probe(struct platform_device *pdev)
 	}
 	pr_debug("enter sysfs create file thermal\n");
 	for (attr_count2 = 0; attr_count2 < ARRAY_SIZE(attrs2); attr_count2++) {
-		rc = sysfs_create_file(&chg->dev->kobj,
+		    rc = sysfs_create_file(&chg->dev->kobj,
 						&attrs2[attr_count2].attr);
 			if (rc < 0) {
-				pr_err(" sysfs create file fail %d\n", rc);
-				sysfs_remove_file(&chg->dev->kobj,
+				pr_err(" sysfs create file fail %d\n",rc);
+		        sysfs_remove_file(&chg->dev->kobj,
 						&attrs2[attr_count2].attr);
 			}
-	}
+		}
 	/* Register android dual-role class */
 	rc = smb5_init_dual_role_class(chip);
 	if (rc < 0) {
@@ -3829,8 +3839,8 @@ static int smb5_probe(struct platform_device *pdev)
 
 	device_init_wakeup(chg->dev, true);
 
-	lct_therm_lvl_reserved.intval = 0;
-	lct_therm_level.intval = 0;
+	lct_therm_lvl_reserved.intval= 0;
+	lct_therm_level.intval= 0;
 	lct_backlight_off = false;
 	INIT_WORK(&chg->fb_notify_work, thermal_fb_notifier_resume_work);
 	/* register suspend and resume fucntion*/
@@ -3856,9 +3866,9 @@ static int smb5_remove(struct platform_device *pdev)
 	unsigned char attr_count2;
 
 	for (attr_count2 = 0; attr_count2 < ARRAY_SIZE(attrs2); attr_count2++) {
-			sysfs_remove_file(&chg->dev->kobj,
+			  sysfs_remove_file(&chg->dev->kobj,
 							&attrs2[attr_count2].attr);
-	}
+			}
 	lct_unregister_powermanger(chg);
 
 	/* force enable APSD */

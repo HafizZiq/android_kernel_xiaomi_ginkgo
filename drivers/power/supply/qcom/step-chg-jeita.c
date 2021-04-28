@@ -1,5 +1,5 @@
 /* Copyright (c) 2017-2019 The Linux Foundation. All rights reserved.
- * Copyright (C) 2019 XiaoMi, Inc.
+ * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -425,7 +425,7 @@ static int get_val(struct range_data *range, int hysteresis, int current_index,
 	* we treat it as 0 degree when the parameter threshold(battery temp) is below 0.
 	*/
 	if (threshold <= 0)
-		threshold = 0;
+			threshold = 0;
 
 	/*
 	 * If the threshold is lesser than the minimum allowed range,
@@ -734,12 +734,12 @@ static int handle_jeita(struct step_chg_info *chip)
 	}
 
 set_jeita_fv:
-	pr_debug(" jeita vote fv_uv:%d last_vol:%d", fv_uv, chip->last_vol);
+	pr_debug(" jeita vote fv_uv:%d last_vol:%d",fv_uv,chip->last_vol);
 	vote(chip->fv_votable, JEITA_VOTER, fv_uv ? true : false, fv_uv);
-	if (fv_uv == JEITA_GOOD_VOL && chip->last_vol == JEITA_WARM_VOL) {
+	if(fv_uv == JEITA_GOOD_VOL &&chip->last_vol == JEITA_WARM_VOL) {
 		rc = power_supply_set_property(chip->batt_psy,
 				POWER_SUPPLY_PROP_FORCE_RECHARGE, &pval);
-		if (rc < 0)
+		if(rc < 0)
 			pr_err("Can't force recharge from batt warm to good ,rc=%d\n", rc);
 	}
 chip->last_vol = fv_uv;
@@ -830,7 +830,7 @@ static void status_change_work(struct work_struct *work)
 	if (reschedule_us == 0)
 		goto exit_work;
 	else
-		queue_delayed_work(system_power_efficient_wq, &chip->status_change_work,
+		schedule_delayed_work(&chip->status_change_work,
 				usecs_to_jiffies(reschedule_us));
 	return;
 
