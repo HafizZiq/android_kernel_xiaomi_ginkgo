@@ -1,3 +1,5 @@
+menu "Memory Management options"
+
 config SELECT_MEMORY_MODEL
 	def_bool y
 	depends on ARCH_SELECT_MEMORY_MODEL
@@ -832,3 +834,5 @@ config PROCESS_RECLAIM
 config VMSTAT_INTERVAL
 	int "Default interval in seconds to update vmstat"
 	default 1
+
+endmenu
