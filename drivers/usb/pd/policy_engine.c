@@ -540,6 +540,7 @@ static inline void start_usb_host(struct usbpd *pd, bool ss)
 {
 	enum plug_orientation cc = usbpd_get_plug_orientation(pd);
 	union extcon_property_value val;
+	int ret = 0;
 
 	val.intval = (cc == ORIENTATION_CC2);
 	extcon_set_property(pd->extcon, EXTCON_USB_HOST,
@@ -550,6 +551,13 @@ static inline void start_usb_host(struct usbpd *pd, bool ss)
 			EXTCON_PROP_USB_SS, val);
 
 	extcon_set_state_sync(pd->extcon, EXTCON_USB_HOST, 1);
+
+	/* blocks until USB host is completely started */
+	ret = extcon_blocking_sync(pd->extcon, EXTCON_USB_HOST, 1);
+	if (ret) {
+		usbpd_err(&pd->dev, "err(%d) starting host", ret);
+		return;
+	}
 }
 
 static inline void stop_usb_peripheral(struct usbpd *pd)
