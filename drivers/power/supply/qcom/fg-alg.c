@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
  * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -733,7 +733,7 @@ void cap_learning_abort(struct cap_learning *cl)
 	pr_debug("Aborting cap_learning\n");
 	cl->active = false;
 	cl->init_cap_uah = 0;
-	mutex_lock(&cl->lock);
+	mutex_unlock(&cl->lock);
 }
 
 /**
