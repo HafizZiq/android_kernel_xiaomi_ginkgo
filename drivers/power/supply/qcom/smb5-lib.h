@@ -581,6 +581,7 @@ struct smb_charger {
 	u32			comp_clamp_level;
 	bool			hvdcp3_standalone_config;
 	int			wls_icl_ua;
+	int			cutoff_count;
 	bool			dpdm_enabled;
 	bool			apsd_ext_timeout;
 	bool			qc3p5_detected;
