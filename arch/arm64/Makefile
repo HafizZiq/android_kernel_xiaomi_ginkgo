@@ -102,6 +102,10 @@ endif
 UTS_MACHINE	:= aarch64
 endif
 
+ifeq ($(CONFIG_LD_LLD), y)
+KBUILD_LDFLAGS	+= -z norelro
+endif
+
 CHECKFLAGS	+= -D__aarch64__ -m64
 
 ifeq ($(CONFIG_ARM64_MODULE_CMODEL_LARGE), y)
