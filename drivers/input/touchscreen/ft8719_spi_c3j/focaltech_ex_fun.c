@@ -1266,8 +1266,6 @@ int lct_create_procfs(struct fts_ts_data *ts_data)
         FTS_INFO("create /proc/tp_info & /proc/tp_lockdown_info succeeded");
     }
 
-    lct_tp_selftest_init(lct_fts_tp_selftest_callback);
-
 #if FTS_GESTURE_EN
     ret = init_lct_tp_gesture(lct_fts_tp_gesture_callback);
     if (ret < 0) {
