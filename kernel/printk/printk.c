@@ -760,8 +760,7 @@ struct devkmsg_user {
 
 static ssize_t devkmsg_write(struct kiocb *iocb, struct iov_iter *from)
 {
-	char *line;
-	char buf[LOG_LINE_MAX + PREFIX_MAX];
+	char *buf, *line;
 	int level = default_message_loglevel;
 	int facility = 1;	/* LOG_USER */
 	struct file *file = iocb->ki_filp;
@@ -783,7 +782,9 @@ static ssize_t devkmsg_write(struct kiocb *iocb, struct iov_iter *from)
 			return ret;
 	}
 
-	memset(&buf, 0, LOG_LINE_MAX + PREFIX_MAX);
+	buf = kmalloc(len+1, GFP_KERNEL);
+	if (buf == NULL)
+		return -ENOMEM;
 
 	buf[len] = '\0';
 	if (!copy_from_iter_full(buf, len, from)) {
@@ -822,6 +823,7 @@ static ssize_t devkmsg_write(struct kiocb *iocb, struct iov_iter *from)
 
 	printk_emit(facility, level, NULL, 0, "%s", line);
 free:
+	kfree(buf);
 	return ret;
 }
 
