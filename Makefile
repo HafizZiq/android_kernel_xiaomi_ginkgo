@@ -719,7 +719,7 @@ ifeq ($(cc-name),clang)
 KBUILD_CFLAGS   += -O3
 KBUILD_CFLAGS	+= -mcpu=cortex-a53 -mtune=cortex-a53
 else
-KBUILD_CFLAGS	+= -mcpu=cortex-a73.cortex-a53 -mtune=cortex-a73.cortex-a53
+KBUILD_CFLAGS	+= -mcpu=cortex-a73.cortex-a53+crypto -mtune=cortex-a73.cortex-a53
 endif
 
 ifdef CONFIG_CC_WERROR
