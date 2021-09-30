@@ -26,4 +26,5 @@ mkdir -p net/wireguard
 curl -A "$USER_AGENT" -LsS --connect-timeout 30 "https://git.zx2c4.com/wireguard-linux-compat/snapshot/wireguard-linux-compat-$VERSION.tar.xz" | tar -C "net/wireguard" -xJf - --strip-components=2 "wireguard-linux-compat-$VERSION/src"
 sed -i 's/tristate/bool/;s/default m/default y/;' net/wireguard/Kconfig
 touch net/wireguard/.check
+git cp -n 249e20a9108a66ff95b19a4239613317fa77046a
 git add net/wireguard && git commit -sm "wireguard: Update to version ${VERSION}"
