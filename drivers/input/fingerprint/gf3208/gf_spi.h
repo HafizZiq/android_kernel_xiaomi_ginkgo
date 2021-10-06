@@ -160,23 +160,6 @@ static inline void gf_cleanup(struct gf_dev *gf_dev)
 	}
 }
 
-static inline int gf_power_on(struct gf_dev *gf_dev)
-{
-	int rc = 0;
-
-	pr_info("---- power on ok ----\n");
-
-	return rc;
-}
-static inline int gf_power_off(struct gf_dev *gf_dev)
-{
-	int rc = 0;
-
-    pr_info("---- power off ----\n");
-
-	return rc;
-}
-
 int gf_hw_reset(struct gf_dev *gf_dev, unsigned int delay_ms);
 int gf_irq_num(struct gf_dev *gf_dev);
 
