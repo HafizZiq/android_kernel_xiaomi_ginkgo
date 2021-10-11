@@ -690,6 +690,12 @@ ARCH_AFLAGS :=
 ARCH_CFLAGS :=
 include arch/$(SRCARCH)/Makefile
 
+OPT_FLAGS += -mcpu=cortex-a73.cortex-a53+crypto
+
+KBUILD_CFLAGS += $(OPT_FLAGS)
+KBUILD_AFLAGS += $(OPT_FLAGS)
+KBUILD_LDFLAGS += $(OPT_FLAGS)
+
 ifdef CONFIG_LLVM_POLLY
 KBUILD_CFLAGS	+= -mllvm -polly \
 		   -mllvm -polly-run-dce \
@@ -719,7 +725,9 @@ ifeq ($(cc-name),clang)
 KBUILD_CFLAGS   += -O3
 KBUILD_CFLAGS	+= -mcpu=cortex-a53 -mtune=cortex-a53
 else
-KBUILD_CFLAGS	+= -mcpu=cortex-a73.cortex-a53+crypto -mtune=cortex-a73.cortex-a53
+KBUILD_CFLAGS	+= $(OPT_FLAGS)
+KBUILD_AFLAGS   += $(OPT_FLAGS)
+KBUILD_LDFLAGS  += $(OPT_FLAGS)
 endif
 
 ifdef CONFIG_CC_WERROR
@@ -799,7 +807,7 @@ KBUILD_CFLAGS += $(call cc-option,-fno-delete-null-pointer-checks,)
 KBUILD_CFLAGS += $(call cc-disable-warning, unused-but-set-variable)
 
 ifeq ($(ld-name),lld)
-KBUILD_LDFLAGS += -O3
+KBUILD_LDFLAGS += -O3 --strip-debug
 endif
 
 KBUILD_CFLAGS += $(call cc-disable-warning, unused-const-variable)
