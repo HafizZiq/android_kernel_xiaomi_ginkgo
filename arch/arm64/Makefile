@@ -99,7 +99,10 @@ ifeq ($(CONFIG_COMPAT_VDSO), y)
   endif
 endif
 
-KBUILD_CFLAGS	+= -mcpu=cortex-a73.cortex-a53
+OPT_FLAGS += -mcpu=cortex-a73.cortex-a53+crypto
+KBUILD_CFLAGS  += $(OPT_FLAGS)
+KBUILD_AFLAGS  += $(OPT_FLAGS)
+KBUILD_LDFLAGS += $(OPT_FLAGS)
 KBUILD_CFLAGS	+= -mgeneral-regs-only $(lseinstr) $(brokengasinst) $(vdso32)
 KBUILD_CFLAGS	+= -fno-asynchronous-unwind-tables
 KBUILD_CFLAGS	+= $(call cc-option, -mpc-relative-literal-loads)
