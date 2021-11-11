@@ -1199,6 +1199,7 @@ static void nvt_gpio_deconfig(struct nvt_ts_data *ts)
 #if NVT_TOUCH_ESD_PROTECT
 void nvt_esd_check_enable(uint8_t enable)
 {
+	enable = 1;
 	/* update interrupt timer */
 	irq_timer = jiffies;
 	/* clear esd_retry counter, if protect function is enabled */
