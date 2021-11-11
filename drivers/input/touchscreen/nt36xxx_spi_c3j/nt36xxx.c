@@ -63,6 +63,10 @@ uint8_t esd_check = false;
 uint8_t esd_retry = 0;
 #endif /* #if NVT_TOUCH_ESD_PROTECT */
 
+#if POINT_DATA_CHECKSUM
+uint8_t point_data_unstable = 0;
+#endif /* #if POINT_DATA_CHECKSUM */
+
 #if NVT_TOUCH_EXT_PROC
 extern int32_t nvt_extra_proc_init(void);
 extern void nvt_extra_proc_deinit(void);
@@ -1231,7 +1235,11 @@ static void nvt_esd_check_func(struct work_struct *work)
 	//NVT_LOG("esd_check = %d (retry %d)\n", esd_check, esd_retry);	//DEBUG
 
 	if ((timer > NVT_TOUCH_ESD_CHECK_PERIOD + 50)
+#if POINT_DATA_CHECKSUM
+		&& (timer < 2 * NVT_TOUCH_ESD_CHECK_PERIOD - 50) && esd_check && point_data_unstable) {
+#else	/* !POINT_DATA_CHECKSUM */
 		&& (timer < 2 * NVT_TOUCH_ESD_CHECK_PERIOD - 50) && esd_check) {
+#endif /* #if POINT_DATA_CHECKSUM */
 		mutex_lock(&ts->lock);
 		NVT_ERR("do ESD recovery, timer = %d, retry = %d\n", timer, esd_retry);
 		/* do esd recovery, reload fw */
