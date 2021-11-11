@@ -37,7 +37,7 @@
 #define NVT_DUMP_PARTITION_LEN  (1024)
 #define NVT_DUMP_PARTITION_PATH "/data/local/tmp"
 
-struct timeval start, end;
+static struct timeval start, end;
 const struct firmware *fw_entry = NULL;
 struct firmware *request_fw_headfile = NULL;
 static size_t fw_need_write_size = 0;
@@ -96,7 +96,7 @@ static int32_t nvt_download_init(void)
 	//NVT_LOG("NVT_TRANSFER_LEN = 0x%06X\n", NVT_TRANSFER_LEN);
 
 	if (fwbuf == NULL) {
-		fwbuf = (uint8_t *)kzalloc((NVT_TRANSFER_LEN+1), GFP_KERNEL);
+		fwbuf = (uint8_t *)kzalloc((NVT_TRANSFER_LEN + 1 + DUMMY_BYTES), GFP_KERNEL);
 		if(fwbuf == NULL) {
 			NVT_ERR("kzalloc for fwbuf failed!\n");
 			return -ENOMEM;
