@@ -519,10 +519,12 @@ static long gf_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	case GF_IOC_ENABLE_POWER:
 		pr_debug("%s GF_IOC_ENABLE_POWER\n", __func__);
+		gf_power_on(gf_dev);
 		break;
 
 	case GF_IOC_DISABLE_POWER:
 		pr_debug("%s GF_IOC_DISABLE_POWER\n", __func__);
+		gf_power_off(gf_dev);
 		break;
 
 	case GF_IOC_ENTER_SLEEP_MODE:
@@ -667,6 +669,7 @@ static int gf_release(struct inode *inode, struct file *filp)
 		gf_cleanup(gf_dev);
 		/*power off the sensor*/
 		gf_dev->device_available = 0;
+		gf_power_off(gf_dev);
 	}
 	mutex_unlock(&device_list_lock);
 	return status;
@@ -723,7 +726,7 @@ static int goodix_fb_state_chg_callback(struct notifier_block *nb,
 	gf_dev = container_of(nb, struct gf_dev, notifier);
 	if (evdata && evdata->data && val == MSM_DRM_EVENT_BLANK && gf_dev) {
 		blank = evdata->data;
-		if (*blank == MSM_DRM_BLANK_UNBLANK) {
+		if (gf_dev->device_available == 1 && *blank == MSM_DRM_BLANK_UNBLANK) {
 				set_fingerprintd_nice(0);
 				gf_dev->fb_black = 0;
 #if defined(GF_NETLINK_ENABLE)
@@ -737,7 +740,7 @@ static int goodix_fb_state_chg_callback(struct notifier_block *nb,
 
 	}else if(evdata && evdata->data && val == MSM_DRM_EARLY_EVENT_BLANK && gf_dev){
 		blank = evdata->data;
-			if (*blank == MSM_DRM_BLANK_POWERDOWN) {
+			if (gf_dev->device_available == 1 && *blank == MSM_DRM_BLANK_POWERDOWN) {
 				set_fingerprintd_nice(MIN_NICE);
 				gf_dev->fb_black = 1;
 				gf_dev->wait_finger_down = true;
